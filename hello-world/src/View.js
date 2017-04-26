@@ -5,6 +5,11 @@ import jssha from 'jssha';
 export class Display extends React.Component{
   constructor(props) {
     super(props);
+
+    this.state = {
+        api: "",
+        secret: ''
+    }
   }
 
   render() {
@@ -23,23 +28,24 @@ class ButtonFetchPrice extends React.Component {
 
 
     this.state = {
-      sign: '',//sha512('169175e9298894d4da1138d127eac9cf8785c8625ac984b730ea03d6758e6440cd990fea8ff4937a908da6d7b222140b4fee41768b35bdc646987e87227e3b8c', 'command=returnBalances'),
+      sign: '',//sha512('', 'command=returnBalances'),
       ethPrice: null,
       queryParams: 'command=returnBalances',
       divStyle: {
         width: 100,
         height: 50
       },
-      hmac: ''
+      hmac: '',
+      keys: {
+          api: "",
+          secret: ''
+      }
     }
 
-    var shaObj = new jssha("SHA-512", "TEXT");
-    shaObj.setHMACKey("169175e9298894d4da1138d127eac9cf8785c8625ac984b730ea03d6758e6440cd990fea8ff4937a908da6d7b222140b4fee41768b35bdc646987e87227e3b8c", "TEXT");
-    shaObj.update(this.state.queryParams);
-    this.state.hmac = shaObj.getHMAC("HEX");
+    
 
 
-    //console.log(sha512('169175e9298894d4da1138d127eac9cf8785c8625ac984b730ea03d6758e6440cd990fea8ff4937a908da6d7b222140b4fee41768b35bdc646987e87227e3b8ccommand=returnBalances'));
+    //console.log(sha512('command=returnBalances'));
 
      this.handleClick = this.handleClick.bind(this);
   }
@@ -49,19 +55,29 @@ class ButtonFetchPrice extends React.Component {
   }
 
   handleClick() {
+    var headersObj = {
+        'Key': this.state.keys.api,
+        'Sign': this.state.hmac,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+        
+      }
+
+
+    var shaObj = new jssha("SHA-512", "TEXT");
+    //shaObj.setHMACKey(this.state.keys.secret, "TEXT");
+    shaObj.update(this.state.secret + this.state.queryParams);
+    //this.state.hmac = shaObj.getHMAC("HEX");
+    this.state.hmac = shaObj.getHash("HEX");
+
     console.log(this.state.hmac);
     fetch('https://poloniex.com/tradingApi?' + this.state.queryParams, {
       mode: 'no-cors',
       method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Key': 'UBCYRORF-Y5EVNXIJ-90IXSP1X-AWQRCL0W',
-        'Sign': this.state.hmac
-      }
+      headers: headersObj
     })
-    .then((response) => response.json())
+    .then((response) => console.log(response.json()))
     .then((responseJson) => {
       this.setState({ethPrice: responseJson["BTC_ETH"].last});
       console.log(responseJson);
